@@ -44,8 +44,7 @@ class CaptionPrep:
         return [self.stoidx['#START#']] +\
                [self.stoidx[w.lower()] if w.lower() in self.stoidx else self.stoidx['#UNK#'] for w in tok] +\
                [self.stoidx['#END#']]
-
-
+    
 class ImgCapData(Dataset):
     '''
     Create torch Dataset for the data loader
@@ -84,16 +83,16 @@ class ImgCapData(Dataset):
         image = np.array(Image.open(os.path.join(self.img_path, image_name)).convert("RGB"))
                 
         if self.transform is not None:
-            image = torch.Tensor(self.transform(image))
+            image = torch.tensor(self.transform(image))
             
 #         if self.target_transform is not None:
 #             label = self.target_transform(label)
 
-        caption = torch.Tensor(self.cap_prep.Sent_idx(self.captions[idx])).int()
+        caption = torch.tensor(self.cap_prep.Sent_idx(self.captions[idx]))
         
         return image, caption
-
-
+    
+    
 class Collate_fun:
     def __init__(self, pad_idx, max_len=30):
         self.pad_idx = pad_idx
@@ -109,8 +108,9 @@ class Collate_fun:
 #             self.max_len = min(self.max_len, len(max(captions, key=lambda x:x.shape[0])))
 #         captions = torch.Tensor([[idx for i, idx in enumerate(cap[:self.max_len])] + [self.pad_idx]*(max(self.max_len-len(cap),0))\
 #                          for cap in captions]).int()
-        captions = pad_sequence(captions, batch_first=True, padding_value=self.pad_idx)
+        captions = pad_sequence(captions, batch_first=False, padding_value=self.pad_idx)
         return imgs, captions
+
 
 class data_prep:
     def __init__(
