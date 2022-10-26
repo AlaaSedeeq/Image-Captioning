@@ -1,11 +1,17 @@
 import os
-import random
-import PIL.Image as Image
-import pandas as pd
-import numpy as np
 import nltk
 import torch
+import numpy as np
+import pandas as pd
+import PIL.Image as Image
+from torch.utils.data import Dataset, DataLoader
+from torch.nn.utils.rnn import pad_sequence 
+from torchvision.transforms import transforms
 
+
+###############################
+# Caption & Image preparation #
+###############################
 class CaptionPrep:
     '''
     Prepare images caption before feeding into the RNN
@@ -45,7 +51,11 @@ class CaptionPrep:
         return [self.stoidx['#START#']] +\
                [self.stoidx[w.lower()] if w.lower() in self.stoidx else self.stoidx['#UNK#'] for w in tok] +\
                [self.stoidx['#END#']]
-    
+
+
+###########################
+# Pytorch Dataste creator #
+###########################
 class ImgCapData(Dataset):
     '''
     Create torch Dataset for the data loader
@@ -93,8 +103,18 @@ class ImgCapData(Dataset):
         
         return image, caption
     
-    
+################################
+# Data Loader collate fnnction #
+################################
 class Collate_fun:
+    '''
+    Customized dataloader data collate function for to ensure sequence(caption) padding
+    ...
+    Attributes
+    ----------
+    pad_idx: index to put in the sequence as a padding value
+    max_len: maximum sequence length
+    '''
     def __init__(self, pad_idx, max_len=30):
         self.pad_idx = pad_idx
         self.max_len = max_len
@@ -109,17 +129,32 @@ class Collate_fun:
 #             self.max_len = min(self.max_len, len(max(captions, key=lambda x:x.shape[0])))
 #         captions = torch.Tensor([[idx for i, idx in enumerate(cap[:self.max_len])] + [self.pad_idx]*(max(self.max_len-len(cap),0))\
 #                          for cap in captions]).int()
-        captions = pad_sequence(captions, batch_first=False, padding_value=self.pad_idx)
+        captions = pad_sequence(captions, batch_first=True, padding_value=self.pad_idx)
         return imgs, captions
 
-
 class data_prep:
+    '''
+    Prepare images & captions dataset and create pytorch dataloader
+    ...
+    Attributes
+    ----------
+    img_path: images data path 
+    cap_path: captions data path
+    freq_th: no. of occurrence for a word in the corpus to be considered in the dictionary
+    transformer: images data transformer
+    inv_trans: image inverse transformer
+    target_transform: caption transformer
+    pin_memory: pin dataloader to a device 
+    batch_size: batch size 
+    shuffle: data shuffling
+    '''
     def __init__(
         self, 
         img_path, 
         cap_path, 
-        freq_th, 
-        transformer, 
+        freq_th=0, 
+        transformer=None, 
+        inv_trans=None,
         target_transform=None, 
         pin_memory=True,
         batch_size=32, 
@@ -130,14 +165,37 @@ class data_prep:
         self.freq_th = freq_th
         self.batch_size = batch_size
         self.shuffle = shuffle
-        self.transformer = transformer
         self.target_transform = target_transform
         self.pin_memory = pin_memory
         
+        # Transformer        
+        if transformer is None and inv_trans is None:
+            self.transformer = transforms.Compose([
+                transforms.ToPILImage(),
+                transforms.Resize((356, 356)),
+                transforms.RandomCrop((350, 350)),
+                transforms.CenterCrop(299),
+                transforms.ToTensor(), # ToTensor : [0, 255] -> [0, 1]
+                transforms.Normalize(
+                    mean=[0.5, 0.5, 0.5], 
+                    std=[0.5, 0.5, 0.5])
+            ])
+
+            self.inv_trans = transforms.Compose([
+                transforms.Normalize(
+                    mean = [ 0., 0., 0. ],
+                    std = [ 1/0.5, 1/0.5, 1/0.5 ]
+                ),
+                transforms.Normalize(
+                    mean = [ -0.5, -0.5, -0.5 ],
+                    std = [ 1., 1., 1. ])
+            ])
+
     def get_data(self):
-        ##################
-        # Gathering Data #
-        ##################
+        '''
+        Returns pytorch dataset and dataloader
+        '''
+        # Gathering Data
         data = ImgCapData(
             img_path=self.img_path,
             cap_path=self.cap_path,
@@ -151,9 +209,7 @@ class data_prep:
         self.idxtos = data.cap_prep.idxtos
         self.stoidx = data.cap_prep.stoidx
 
-        #####################
-        # Create DataLoader #
-        #####################
+        # Create DataLoader
         dataloader = DataLoader(
             data,
             batch_size=self.batch_size,
