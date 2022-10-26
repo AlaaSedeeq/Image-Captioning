@@ -2,7 +2,7 @@
 
 Combining Deep Learning architectures like CNN, LSTM, and MLP, I’ve built a DL model that’s capable of captioning images. This project is an intersection of computer vision and natural language processing, it’s based on encoder-decoder framework, encodes input images into intermediate representations of their contents and decodes them into descriptive text sequences.
 
-<img src="Results/Img_cap.png"></img>
+<img src="Results/Img_Cap.png"></img>
 
 ## Project blocks:
 - Data preparation block:
