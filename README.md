@@ -20,3 +20,17 @@ Combining Deep Learning architectures like CNN, LSTM, and MLP, I’ve built a DL
   - Returns a probability for each word in the dictionary at each step, with number of steps equals to the pre-determined maximum caption length
   
 <img src="Results/Ex.png"></img>
+
+
+## Using:
+  - data_prep.py: 
+    - prepares the caption
+    - Builds dictionary
+    - Does the encoding processe
+    - Builds the dataloader for training
+    - Prepare images pefore feeding into the encoder(size, tensor, normalization,...)
+  - model.py: 
+    - Builds the model (Encoder-Decoder)
+  - trainer:
+    - Trains the model on the prepared data
+    - Save the trained model
