@@ -18,7 +18,7 @@ class Encoder(nn.Module):
         self._dropout = nn.Dropout(self.dropout)
         
     def forward(self, x):
-        return torch.rand(len(x), self.feature_size)
+        
         out = self._feature_extr(x)[0]
         out = self._act(out)
         out = self._dropout(out)
